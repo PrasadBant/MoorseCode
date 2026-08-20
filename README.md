@@ -82,6 +82,7 @@ The login screen validates against a hardcoded credential list for demo purposes
 |---|---|
 | `admin` | `ghost2024` |
 | `operator` | `rescue915` |
+| `vishu` | `moorscode` |
 
 > ⚠️ See [Security Notes](#security-notes) below before using any of this beyond a local demo.
 
