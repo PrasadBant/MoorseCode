@@ -12,7 +12,7 @@
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useInViewport } from '../hooks/useInViewport';
+import { useInViewport } from '@/hooks/useInViewport';
 
 const Wave = ({ color, amplitude, speed, phaseOffset = 0 }) => {
   const POINTS = 80;

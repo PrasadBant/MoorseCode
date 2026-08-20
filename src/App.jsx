@@ -1,27 +1,18 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import GlobalBackground3D from './components/GlobalBackground3D';
-import AdminLogin from './components/AdminLogin';
+import GlobalBackground3D from '@/components/three/GlobalBackground3D';
+import AdminLogin from '@/components/auth/AdminLogin';
+import { API_ENDPOINT } from '@/config/env';
+import { DEMO_CYCLE } from '@/constants/telemetry';
+import { LOCATE_SECTORS, LOCATE_BASE_LAT, LOCATE_BASE_LNG, LOCATE_JITTER_DEG } from '@/constants/locate';
+import { getPreciseTime } from '@/utils/time';
+import { normalizeMessage } from '@/utils/signal';
 
 // Everything behind the login gate is code-split into its own chunk — the
 // login screen's initial load shouldn't have to fetch/parse the terminal,
 // radar scene, pipeline diagram, and audit log before an operator even
 // authenticates.
-const Dashboard = lazy(() => import('./components/Dashboard'));
-
-const API_ENDPOINT = 'http://10.56.55.74:5000/data'; // Raspberry Pi 5 API
-
-const DEMO_CYCLE = [
-  { status: 'ACTIVE', message: 'OK', esp_status: 'CONNECTED' },
-  { status: 'ACTIVE', message: 'HELP', esp_status: 'CONNECTED' },
-  { status: 'ACTIVE', message: 'SOS', esp_status: 'CONNECTED' },
-  { status: 'ACTIVE', message: 'SURVIVOR DETECTED', esp_status: 'CONNECTED' },
-];
-
-const getPreciseTime = () => {
-  const now = new Date();
-  return `${now.toLocaleTimeString('en-US', { hour12: false })}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-};
+const Dashboard = lazy(() => import('@/components/layout/Dashboard'));
 
 // Shown briefly while the code-split Dashboard chunk is fetched/parsed.
 const DashboardLoading = () => (
@@ -91,6 +82,10 @@ function App() {
   const demoIndexRef = useRef(0);
   const lastMessageRef = useRef('OK');
 
+  // Tactical Map — accumulated coordinate fixes from the `locate` command
+  const [locatePins, setLocatePins] = useState([]);
+  const locateSectorRef = useRef(0);
+
   // Sync logs state with localStorage
   useEffect(() => {
     localStorage.setItem('ghostlinkx_audit', JSON.stringify(logs));
@@ -110,19 +105,6 @@ function App() {
       addLog('LOG REPOSITORY PURGED. STANDBY FOR NEW TELEMETRY...', 'warning');
     }, 100);
   }, [addLog]);
-
-  // ── Global Signal Normalization ──
-  const normalizeMessage = (raw) => {
-    if (!raw) return 'OK';
-    const upper = String(raw).trim().toUpperCase();
-
-    if (upper === 'SOS' || upper.includes('SOS') || upper === '... --- ...') return 'SOS';
-    if (upper === 'HELP' || upper.includes('HELP') || upper === '.... . .-.. .--.') return 'HELP';
-    if (upper.includes('SURVIVOR')) return 'SURVIVOR DETECTED';
-    if (upper.includes('OK') || upper.includes('NOMINAL') || upper.includes('CLEAR')) return 'OK';
-
-    return upper; // Pass raw string through for unknown signals
-  };
 
   // Raspberry Pi 5 Server Polling (Runs in background)
   const [piConnected, setPiConnected] = useState(false);
@@ -281,8 +263,38 @@ function App() {
     } else if (cmd === 'locate') {
       addLog('TRIANGULATING Morse SOS RF Signals...', 'info');
       addLog('RESOLVING BIO-SIGNATURE VECTOR FROM SENSOR APEX...', 'info');
+
+      // Jitter a fresh fix off the base point each time so repeated `locate`
+      // calls plot distinct points on the Tactical Map instead of stacking
+      // one coordinate — reads as multiple triangulation passes drifting
+      // toward the actual signal source.
+      const dLat = (Math.random() - 0.5) * 2 * LOCATE_JITTER_DEG;
+      const dLng = (Math.random() - 0.5) * 2 * LOCATE_JITTER_DEG;
+      const lat = LOCATE_BASE_LAT + dLat;
+      const lng = LOCATE_BASE_LNG + dLng;
+      const latLabel = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}`;
+      const lngLabel = `${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`;
+      const sector = LOCATE_SECTORS[locateSectorRef.current % LOCATE_SECTORS.length];
+      locateSectorRef.current += 1;
+
       addLog('TARGET BIO-COORDINATE ACQUIRED!', 'success');
-      addLog('COORDINATES: LAT 34.0522° N, LNG 118.2437° W // SECTOR: ALPHA-03', 'success');
+      addLog(`COORDINATES: LAT ${latLabel}, LNG ${lngLabel} // SECTOR: ${sector}`, 'success');
+
+      setLocatePins(prev => {
+        const pin = {
+          id: Date.now() + Math.random(),
+          // Map the +/-JITTER_DEG drift onto SVG space (center 100,100, ring radius ~98)
+          x: 100 + (dLng / LOCATE_JITTER_DEG) * 82,
+          y: 100 - (dLat / LOCATE_JITTER_DEG) * 82,
+          lat: latLabel,
+          lng: lngLabel,
+          sector,
+          severity: dataRef.current.message,
+          time: getPreciseTime(),
+        };
+        const next = [...prev, pin];
+        return next.length > 10 ? next.slice(next.length - 10) : next;
+      });
     } else if (cmd === 'nodes') {
       addLog('NODE DIAGNOSTIC LOG (GRID_ALPHA_POOLS):', 'info');
       addLog('  - NODE_0x1A4F: ONLINE | LNTY: 12ms | RSSI: -54 dBm', 'success');
@@ -340,6 +352,7 @@ function App() {
               <Dashboard
                 data={data}
                 logs={logs}
+                locatePins={locatePins}
                 isDemoMode={isDemoMode}
                 isAutoCycle={isAutoCycle}
                 setIsAutoCycle={setIsAutoCycle}

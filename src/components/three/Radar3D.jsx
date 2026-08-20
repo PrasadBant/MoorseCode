@@ -7,7 +7,7 @@ import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
-import { useInViewport } from '../hooks/useInViewport';
+import { useInViewport } from '@/hooks/useInViewport';
 
 // ── Radar Base Grid (flat rings + spokes) ──────────────────────────────────
 const RadarGrid = ({ color }) => {

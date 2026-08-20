@@ -1,9 +1,9 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
-import OverviewPage from '../pages/OverviewPage';
-import TerminalPage from '../pages/TerminalPage';
-import PipelinePage from '../pages/PipelinePage';
-import AuditLogPage from '../pages/AuditLogPage';
+import OverviewPage from '@/pages/OverviewPage';
+import TerminalPage from '@/pages/TerminalPage';
+import PipelinePage from '@/pages/PipelinePage';
+import AuditLogPage from '@/pages/AuditLogPage';
 
 /**
  * Dashboard.jsx
@@ -21,6 +21,7 @@ import AuditLogPage from '../pages/AuditLogPage';
 const Dashboard = ({
   data,
   logs,
+  locatePins,
   isDemoMode,
   isAutoCycle,
   setIsAutoCycle,
@@ -55,6 +56,7 @@ const Dashboard = ({
               onAlertChange={onAlertChange}
               logs={logs}
               onExecuteCommand={onExecuteCommand}
+              locatePins={locatePins}
             />
           }
         />

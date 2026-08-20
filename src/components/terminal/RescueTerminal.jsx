@@ -24,6 +24,15 @@ const RescueTerminal = ({ logs, onExecuteCommand }) => {
   const logContainerRef = useRef(null);
   const inputRef = useRef(null);
 
+  // ── Command history (↑/↓ recall, shell-style) ──
+  // commandHistory is oldest -> newest; historyIndex of -1 means "not
+  // browsing, showing the live draft". draftRef holds whatever was typed
+  // before the operator started pressing ↑, so ↓ past the newest entry
+  // restores it instead of just clearing the line.
+  const [commandHistory, setCommandHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const draftRef = useRef('');
+
   // Scroll only this panel's own log container — never scrollIntoView() on
   // the end marker, since that bubbles up to the *page* scroll too and yanks
   // the whole window back here every time a background log line arrives
@@ -39,7 +48,38 @@ const RescueTerminal = ({ logs, onExecuteCommand }) => {
     const cmd = inputVal.trim();
     if (!cmd) return;
     onExecuteCommand(cmd);
+    setCommandHistory(prev => {
+      // Don't stack an exact repeat of the immediately previous command —
+      // matches how bash/zsh dedupe consecutive re-runs.
+      if (prev[prev.length - 1] === cmd) return prev;
+      const next = [...prev, cmd];
+      return next.length > 50 ? next.slice(next.length - 50) : next;
+    });
+    setHistoryIndex(-1);
+    draftRef.current = '';
     setInputVal('');
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (commandHistory.length === 0) return;
+      if (historyIndex === -1) draftRef.current = inputVal;
+      const nextIndex = historyIndex === -1 ? commandHistory.length - 1 : Math.max(0, historyIndex - 1);
+      setHistoryIndex(nextIndex);
+      setInputVal(commandHistory[nextIndex]);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex === -1) return;
+      const nextIndex = historyIndex + 1;
+      if (nextIndex >= commandHistory.length) {
+        setHistoryIndex(-1);
+        setInputVal(draftRef.current);
+      } else {
+        setHistoryIndex(nextIndex);
+        setInputVal(commandHistory[nextIndex]);
+      }
+    }
   };
 
   return (
@@ -168,9 +208,10 @@ const RescueTerminal = ({ logs, onExecuteCommand }) => {
             type="text"
             value={inputVal}
             onChange={e => setInputVal(e.target.value)}
+            onKeyDown={handleKeyDown}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder="type command…"
+            placeholder="type command… (↑↓ history)"
             className="w-full bg-transparent text-[11px] font-mono focus:outline-none uppercase tracking-wide placeholder-steel-600/60"
             style={{ color: '#00E5FF' }}
             autoComplete="off"

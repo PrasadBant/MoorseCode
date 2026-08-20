@@ -1,4 +1,4 @@
-import EventAuditLog from '../components/EventAuditLog';
+import EventAuditLog from '@/components/audit/EventAuditLog';
 
 /**
  * AuditLogPage.jsx — "/audit"
