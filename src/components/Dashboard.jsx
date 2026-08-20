@@ -21,6 +21,7 @@ import AuditLogPage from '../pages/AuditLogPage';
 const Dashboard = ({
   data,
   logs,
+  locatePins,
   isDemoMode,
   isAutoCycle,
   setIsAutoCycle,
@@ -55,6 +56,7 @@ const Dashboard = ({
               onAlertChange={onAlertChange}
               logs={logs}
               onExecuteCommand={onExecuteCommand}
+              locatePins={locatePins}
             />
           }
         />

@@ -11,6 +11,13 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 
 const API_ENDPOINT = 'http://10.56.55.74:5000/data'; // Raspberry Pi 5 API
 
+// Sectors cycled through by the `locate` command, purely cosmetic labeling
+// for each triangulated fix.
+const LOCATE_SECTORS = ['ALPHA-01', 'ALPHA-02', 'ALPHA-03', 'BRAVO-01', 'BRAVO-02', 'CHARLIE-01', 'CHARLIE-02'];
+const LOCATE_BASE_LAT = 34.0522;
+const LOCATE_BASE_LNG = -118.2437;
+const LOCATE_JITTER_DEG = 0.3; // max +/- degrees of drift from the base point per fix
+
 const DEMO_CYCLE = [
   { status: 'ACTIVE', message: 'OK', esp_status: 'CONNECTED' },
   { status: 'ACTIVE', message: 'HELP', esp_status: 'CONNECTED' },
@@ -90,6 +97,10 @@ function App() {
   const [isAutoCycle, setIsAutoCycle] = useState(true); // Toggle to pause/resume auto cycle rotation
   const demoIndexRef = useRef(0);
   const lastMessageRef = useRef('OK');
+
+  // Tactical Map — accumulated coordinate fixes from the `locate` command
+  const [locatePins, setLocatePins] = useState([]);
+  const locateSectorRef = useRef(0);
 
   // Sync logs state with localStorage
   useEffect(() => {
@@ -281,8 +292,38 @@ function App() {
     } else if (cmd === 'locate') {
       addLog('TRIANGULATING Morse SOS RF Signals...', 'info');
       addLog('RESOLVING BIO-SIGNATURE VECTOR FROM SENSOR APEX...', 'info');
+
+      // Jitter a fresh fix off the base point each time so repeated `locate`
+      // calls plot distinct points on the Tactical Map instead of stacking
+      // one coordinate — reads as multiple triangulation passes drifting
+      // toward the actual signal source.
+      const dLat = (Math.random() - 0.5) * 2 * LOCATE_JITTER_DEG;
+      const dLng = (Math.random() - 0.5) * 2 * LOCATE_JITTER_DEG;
+      const lat = LOCATE_BASE_LAT + dLat;
+      const lng = LOCATE_BASE_LNG + dLng;
+      const latLabel = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}`;
+      const lngLabel = `${Math.abs(lng).toFixed(4)}° ${lng >= 0 ? 'E' : 'W'}`;
+      const sector = LOCATE_SECTORS[locateSectorRef.current % LOCATE_SECTORS.length];
+      locateSectorRef.current += 1;
+
       addLog('TARGET BIO-COORDINATE ACQUIRED!', 'success');
-      addLog('COORDINATES: LAT 34.0522° N, LNG 118.2437° W // SECTOR: ALPHA-03', 'success');
+      addLog(`COORDINATES: LAT ${latLabel}, LNG ${lngLabel} // SECTOR: ${sector}`, 'success');
+
+      setLocatePins(prev => {
+        const pin = {
+          id: Date.now() + Math.random(),
+          // Map the +/-JITTER_DEG drift onto SVG space (center 100,100, ring radius ~98)
+          x: 100 + (dLng / LOCATE_JITTER_DEG) * 82,
+          y: 100 - (dLat / LOCATE_JITTER_DEG) * 82,
+          lat: latLabel,
+          lng: lngLabel,
+          sector,
+          severity: dataRef.current.message,
+          time: getPreciseTime(),
+        };
+        const next = [...prev, pin];
+        return next.length > 10 ? next.slice(next.length - 10) : next;
+      });
     } else if (cmd === 'nodes') {
       addLog('NODE DIAGNOSTIC LOG (GRID_ALPHA_POOLS):', 'info');
       addLog('  - NODE_0x1A4F: ONLINE | LNTY: 12ms | RSSI: -54 dBm', 'success');
@@ -340,6 +381,7 @@ function App() {
               <Dashboard
                 data={data}
                 logs={logs}
+                locatePins={locatePins}
                 isDemoMode={isDemoMode}
                 isAutoCycle={isAutoCycle}
                 setIsAutoCycle={setIsAutoCycle}
