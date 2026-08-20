@@ -196,7 +196,7 @@ const AdminLogin = ({ onAuthenticated }) => {
 
         {/* ── LEFT PANEL — tactical readout ───────────────────── */}
         <motion.div
-          className="w-full lg:w-1/2 flex flex-col justify-center px-8 py-10 lg:px-16 relative"
+          className="w-full lg:w-1/2 flex flex-col justify-center px-8 py-10 lg:px-16 relative order-2 lg:order-1"
           initial={{ opacity: 0, x: -24 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
@@ -242,7 +242,7 @@ const AdminLogin = ({ onAuthenticated }) => {
         </motion.div>
 
         {/* ── RIGHT PANEL — auth form ─────────────────────────── */}
-        <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-6 py-10 lg:px-16">
+        <div className="w-full lg:w-1/2 flex flex-col items-center justify-center px-6 py-10 lg:px-16 order-1 lg:order-2">
           <motion.div
             className="w-full max-w-[380px]"
             initial={{ opacity: 0, x: 24 }}
@@ -361,7 +361,7 @@ const AdminLogin = ({ onAuthenticated }) => {
                         style={{ background: 'rgba(255,59,92,0.08)', border: '1px solid rgba(255,59,92,0.22)' }}
                       >
                         <span>✗</span>
-                        <span>Invalid credentials — attempt {attempt}/3 logged</span>
+                        <span>Invalid credentials — attempt {Math.min(attempt, 3)}/3 logged</span>
                       </motion.div>
                     )}
                     {status === 'success' && (
