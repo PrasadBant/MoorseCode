@@ -1,6 +1,6 @@
-import Hero from '../components/Hero';
-import LiveStatusPanel from '../components/LiveStatusPanel';
-import Radar3D from '../components/Radar3D';
+import Hero from '@/components/overview/Hero';
+import LiveStatusPanel from '@/components/overview/LiveStatusPanel';
+import Radar3D from '@/components/three/Radar3D';
 
 /**
  * OverviewPage.jsx — "/"

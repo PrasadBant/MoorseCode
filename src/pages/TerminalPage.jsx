@@ -1,6 +1,6 @@
-import LiveAlertPanel from '../components/LiveAlertPanel';
-import RescueTerminal from '../components/RescueTerminal';
-import TacticalMap from '../components/TacticalMap';
+import LiveAlertPanel from '@/components/terminal/LiveAlertPanel';
+import RescueTerminal from '@/components/terminal/RescueTerminal';
+import TacticalMap from '@/components/terminal/TacticalMap';
 
 /**
  * TerminalPage.jsx — "/terminal"

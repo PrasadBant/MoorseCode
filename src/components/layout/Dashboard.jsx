@@ -1,9 +1,9 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
-import OverviewPage from '../pages/OverviewPage';
-import TerminalPage from '../pages/TerminalPage';
-import PipelinePage from '../pages/PipelinePage';
-import AuditLogPage from '../pages/AuditLogPage';
+import OverviewPage from '@/pages/OverviewPage';
+import TerminalPage from '@/pages/TerminalPage';
+import PipelinePage from '@/pages/PipelinePage';
+import AuditLogPage from '@/pages/AuditLogPage';
 
 /**
  * Dashboard.jsx

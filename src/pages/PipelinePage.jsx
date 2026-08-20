@@ -1,5 +1,5 @@
-import PipelineDiagram from '../components/PipelineDiagram';
-import SystemOverview from '../components/SystemOverview';
+import PipelineDiagram from '@/components/pipeline/PipelineDiagram';
+import SystemOverview from '@/components/overview/SystemOverview';
 
 /**
  * PipelinePage.jsx — "/pipeline"

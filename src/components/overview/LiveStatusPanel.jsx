@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import SignalWaveform from './SignalWaveform';
+import SignalWaveform from '@/components/three/SignalWaveform';
 
 const STATE_COLOR = { active: '#00E5FF', danger: '#FF3B5C', dim: '#3A4358' };
 

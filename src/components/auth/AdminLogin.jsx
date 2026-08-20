@@ -9,13 +9,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// ── Demo credentials (replace with real auth in production) ──
-const VALID_CREDENTIALS = [
-  { user: 'admin',    pass: 'ghost2024' },
-  { user: 'operator', pass: 'rescue915' },
-  { user: 'vishu',    pass: 'moorscode' },
-];
+import { VALID_CREDENTIALS } from '@/config/credentials';
 
 const BOOT_LINES = [
   'GHOSTLINK X SECURE BOOT SEQUENCE v2.4.8 ...',

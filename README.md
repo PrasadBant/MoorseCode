@@ -13,7 +13,7 @@
 
 GHOSTLINK X is the operator-facing dashboard for a hypothetical offline disaster-communication system: an Arduino-based Morse decoder feeds an ESP8266 mesh (ESP-NOW), a Raspberry Pi gateway classifies incoming signals, and this dashboard visualizes the result in real time — live diagnostics, a 3D radar sweep, an alert protocol readout, and a command-line terminal for issuing rescue-ops commands.
 
-The dashboard runs standalone in **demo mode** by default (no hardware required) — it simulates incoming signals on a cycle so every panel is fully interactive and populated out of the box. Point `API_ENDPOINT` in `src/App.jsx` at a live Raspberry Pi gateway and it switches to live mode automatically.
+The dashboard runs standalone in **demo mode** by default (no hardware required) — it simulates incoming signals on a cycle so every panel is fully interactive and populated out of the box. Point `VITE_API_ENDPOINT` (see [Configuration](#configuration)) at a live Raspberry Pi gateway and it switches to live mode automatically.
 
 ## Features
 
@@ -74,6 +74,19 @@ npm run preview  # serve the production build locally
 npm run lint
 ```
 
+## Configuration
+
+The dashboard reads its Pi gateway endpoint from `VITE_API_ENDPOINT` at
+build/dev time (`src/config/env.js`), falling back to a demo LAN address
+if unset. To point it at your own gateway:
+
+```bash
+cp .env.example .env.local
+# then edit .env.local
+```
+
+`.env.local` is git-ignored, so this never needs to touch tracked source.
+
 ## Demo Credentials
 
 The login screen validates against a hardcoded credential list for demo purposes:
@@ -88,33 +101,59 @@ The login screen validates against a hardcoded credential list for demo purposes
 
 ## Project Structure
 
+Components are grouped **by feature**, not by type — everything a given
+piece of the dashboard needs lives together. `components/three/` is the
+one exception, grouped by technology (React Three Fiber) since those
+pieces are reused across features and share render-loop/perf concerns
+rather than domain logic. Cross-folder imports use the `@/` alias
+(`vite.config.js` + `jsconfig.json`); same-folder sibling imports stay
+relative. See [CONTRIBUTING.md](CONTRIBUTING.md) for more on both.
+
 ```
 src/
-├── App.jsx                      # Auth gate + top-level state (polling, demo cycle, logs)
-├── main.jsx                     # React root + ErrorBoundary
-├── index.css                    # Design tokens, base styles, Tailwind utilities
+├── App.jsx                        # Auth gate + top-level state (polling, demo cycle, logs)
+├── main.jsx                       # React root + ErrorBoundary
+├── index.css                      # Design tokens, base styles, Tailwind utilities
+├── config/
+│   ├── env.js                     # API_ENDPOINT, read from VITE_API_ENDPOINT
+│   └── credentials.js             # Demo operator credential list
+├── constants/
+│   ├── telemetry.js                # DEMO_CYCLE — the simulated telemetry rotation
+│   └── locate.js                   # Sectors/base-point/jitter for the `locate` command
+├── utils/
+│   ├── time.js                     # getPreciseTime() — shared timestamp formatter
+│   └── signal.js                   # normalizeMessage() — raw signal → alert vocabulary
 ├── hooks/
-│   └── useInViewport.js         # IntersectionObserver + Page Visibility hook (pauses off-screen 3D)
+│   └── useInViewport.js           # IntersectionObserver + Page Visibility hook (pauses off-screen 3D)
 ├── components/
-│   ├── AdminLogin.jsx           # Operator authentication screen
-│   ├── Dashboard.jsx            # Router definition (HashRouter + routes)
-│   ├── DashboardLayout.jsx      # Shared header / nav / footer shell
-│   ├── ErrorBoundary.jsx        # Render-crash fallback UI
-│   ├── Hero.jsx                 # Landing hero section
-│   ├── LiveStatusPanel.jsx      # System diagnostics panel
-│   ├── LiveAlertPanel.jsx       # Alert protocol readout
-│   ├── Radar3D.jsx              # 3D radar scene
-│   ├── RescueTerminal.jsx       # Interactive command shell
-│   ├── PipelineDiagram.jsx      # Hardware data-flow diagram
-│   ├── EventAuditLog.jsx        # Filterable/exportable event log
-│   ├── SystemOverview.jsx       # Capability cards
-│   ├── SignalWaveform.jsx       # 3D RF signal waveform (used in LiveStatusPanel)
-│   └── GlobalBackground3D.jsx   # Ambient 3D network globe background
+│   ├── common/
+│   │   └── ErrorBoundary.jsx      # Render-crash fallback UI
+│   ├── auth/
+│   │   └── AdminLogin.jsx         # Operator authentication screen
+│   ├── layout/
+│   │   ├── Dashboard.jsx          # Router definition (HashRouter + routes)
+│   │   └── DashboardLayout.jsx    # Shared header / nav / footer shell
+│   ├── overview/
+│   │   ├── Hero.jsx               # Landing hero section
+│   │   ├── LiveStatusPanel.jsx    # System diagnostics panel
+│   │   └── SystemOverview.jsx     # Capability cards
+│   ├── terminal/
+│   │   ├── LiveAlertPanel.jsx     # Alert protocol readout
+│   │   ├── RescueTerminal.jsx     # Interactive command shell (with ↑/↓ history recall)
+│   │   └── TacticalMap.jsx        # Plots fixes triangulated by the `locate` command
+│   ├── pipeline/
+│   │   └── PipelineDiagram.jsx    # Hardware data-flow diagram
+│   ├── audit/
+│   │   └── EventAuditLog.jsx      # Filterable/exportable event log
+│   └── three/
+│       ├── Radar3D.jsx            # 3D radar scene
+│       ├── SignalWaveform.jsx     # 3D RF signal waveform (used in LiveStatusPanel)
+│       └── GlobalBackground3D.jsx # Ambient 3D network globe background
 └── pages/
-    ├── OverviewPage.jsx         # "/"          — Hero + Status + Radar
-    ├── TerminalPage.jsx         # "/terminal"  — Alert Protocol + Terminal
-    ├── PipelinePage.jsx         # "/pipeline"  — Pipeline diagram + Capabilities
-    └── AuditLogPage.jsx         # "/audit"     — Event Audit Log
+    ├── OverviewPage.jsx           # "/"          — Hero + Status + Radar
+    ├── TerminalPage.jsx           # "/terminal"  — Alert Protocol + Terminal + Tactical Map
+    ├── PipelinePage.jsx           # "/pipeline"  — Pipeline diagram + Capabilities
+    └── AuditLogPage.jsx           # "/audit"     — Event Audit Log
 ```
 
 ## How It Works
@@ -124,16 +163,22 @@ ARDUINO UNO  →  ESP8266 TX  →  915 MHz Mesh  →  ESP8266 RX  →  RASPBERRY
 (Morse decoder)  (RF transmit)   (ESP-NOW)      (RF receive)    (API gateway)     (this app)
 ```
 
-The dashboard polls `API_ENDPOINT` (`src/App.jsx`) every 2 seconds for live telemetry. If the endpoint is unreachable — which it will be unless you have the actual hardware chain running — it falls back to a demo cycle that rotates through `OK → HELP → SOS → SURVIVOR DETECTED` every 6 seconds, so the full UI stays populated and interactive without any hardware attached.
+The dashboard polls `API_ENDPOINT` (`src/config/env.js`) every 2 seconds for live telemetry. If the endpoint is unreachable — which it will be unless you have the actual hardware chain running — it falls back to a demo cycle that rotates through `OK → HELP → SOS → SURVIVOR DETECTED` every 6 seconds, so the full UI stays populated and interactive without any hardware attached.
 
 ## Security Notes
 
 This is a frontend demo, not a production security boundary:
 
-- **Client-side-only auth** — the credential list in `AdminLogin.jsx` ships in the JS bundle and is trivially visible via devtools. There's no backend, so this cannot be a real access-control layer as-is.
+- **Client-side-only auth** — the credential list in `src/config/credentials.js` ships in the JS bundle and is trivially visible via devtools. There's no backend, so this cannot be a real access-control layer as-is.
 - **The Pi gateway endpoint is plaintext HTTP** and hardcoded — fine for a local demo, but not something to expose beyond a trusted local network without putting a real backend and TLS in front of it.
 
 Both are intentional trade-offs for a self-contained frontend demo, not oversights — treat this as a UI/UX reference implementation, not an access-controlled deployment.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the pre-PR checklist, and
+the conventions behind the folder layout above. CI (`.github/workflows/ci.yml`)
+runs lint + build on every push/PR to `main`.
 
 ## License
 

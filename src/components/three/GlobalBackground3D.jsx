@@ -9,7 +9,7 @@
 import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useInViewport } from '../hooks/useInViewport';
+import { useInViewport } from '@/hooks/useInViewport';
 
 // ── Shared Rotation Hook ──
 const useRotate = (ref, ry = 0.05, rx = 0.02) => {

@@ -1,34 +1,18 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import GlobalBackground3D from './components/GlobalBackground3D';
-import AdminLogin from './components/AdminLogin';
+import GlobalBackground3D from '@/components/three/GlobalBackground3D';
+import AdminLogin from '@/components/auth/AdminLogin';
+import { API_ENDPOINT } from '@/config/env';
+import { DEMO_CYCLE } from '@/constants/telemetry';
+import { LOCATE_SECTORS, LOCATE_BASE_LAT, LOCATE_BASE_LNG, LOCATE_JITTER_DEG } from '@/constants/locate';
+import { getPreciseTime } from '@/utils/time';
+import { normalizeMessage } from '@/utils/signal';
 
 // Everything behind the login gate is code-split into its own chunk — the
 // login screen's initial load shouldn't have to fetch/parse the terminal,
 // radar scene, pipeline diagram, and audit log before an operator even
 // authenticates.
-const Dashboard = lazy(() => import('./components/Dashboard'));
-
-const API_ENDPOINT = 'http://10.56.55.74:5000/data'; // Raspberry Pi 5 API
-
-// Sectors cycled through by the `locate` command, purely cosmetic labeling
-// for each triangulated fix.
-const LOCATE_SECTORS = ['ALPHA-01', 'ALPHA-02', 'ALPHA-03', 'BRAVO-01', 'BRAVO-02', 'CHARLIE-01', 'CHARLIE-02'];
-const LOCATE_BASE_LAT = 34.0522;
-const LOCATE_BASE_LNG = -118.2437;
-const LOCATE_JITTER_DEG = 0.3; // max +/- degrees of drift from the base point per fix
-
-const DEMO_CYCLE = [
-  { status: 'ACTIVE', message: 'OK', esp_status: 'CONNECTED' },
-  { status: 'ACTIVE', message: 'HELP', esp_status: 'CONNECTED' },
-  { status: 'ACTIVE', message: 'SOS', esp_status: 'CONNECTED' },
-  { status: 'ACTIVE', message: 'SURVIVOR DETECTED', esp_status: 'CONNECTED' },
-];
-
-const getPreciseTime = () => {
-  const now = new Date();
-  return `${now.toLocaleTimeString('en-US', { hour12: false })}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-};
+const Dashboard = lazy(() => import('@/components/layout/Dashboard'));
 
 // Shown briefly while the code-split Dashboard chunk is fetched/parsed.
 const DashboardLoading = () => (
@@ -121,19 +105,6 @@ function App() {
       addLog('LOG REPOSITORY PURGED. STANDBY FOR NEW TELEMETRY...', 'warning');
     }, 100);
   }, [addLog]);
-
-  // ── Global Signal Normalization ──
-  const normalizeMessage = (raw) => {
-    if (!raw) return 'OK';
-    const upper = String(raw).trim().toUpperCase();
-
-    if (upper === 'SOS' || upper.includes('SOS') || upper === '... --- ...') return 'SOS';
-    if (upper === 'HELP' || upper.includes('HELP') || upper === '.... . .-.. .--.') return 'HELP';
-    if (upper.includes('SURVIVOR')) return 'SURVIVOR DETECTED';
-    if (upper.includes('OK') || upper.includes('NOMINAL') || upper.includes('CLEAR')) return 'OK';
-
-    return upper; // Pass raw string through for unknown signals
-  };
 
   // Raspberry Pi 5 Server Polling (Runs in background)
   const [piConnected, setPiConnected] = useState(false);
