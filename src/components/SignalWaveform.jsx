@@ -3,13 +3,18 @@
  * A 3D animated sine-wave visualizer showing live signal strength.
  * Used inside the LiveStatusPanel header.
  */
-import React, { useRef, useMemo } from 'react';
+/* eslint-disable react-hooks/immutability --
+   `useFrame` runs r3f's own WebGL animation loop, outside React's render
+   phase, and mutating the typed-array buffer in place each frame (instead
+   of allocating a new one) is the standard react-three-fiber pattern for
+   keeping this at 60fps. The React-Compiler-oriented purity/immutability
+   rules can't tell that apart from a real render-phase mutation. */
+import { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useInViewport } from '../hooks/useInViewport';
 
 const Wave = ({ color, amplitude, speed, phaseOffset = 0 }) => {
-  const ref = useRef();
   const POINTS = 80;
 
   // Create a static positions buffer, update it in useFrame

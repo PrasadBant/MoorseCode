@@ -9,11 +9,12 @@ const itemVariants = {
   visible:  { y:  0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } }
 };
 
+const TAGLINE = 'Tactical Offline Disaster Communication Protocol';
+
 const TypewriterText = ({ text }) => {
   const [displayed, setDisplayed] = useState('');
   useEffect(() => {
     let i = 0;
-    setDisplayed('');
     const id = setInterval(() => {
       setDisplayed(t => t + text.charAt(i));
       i++;
@@ -113,7 +114,7 @@ const Hero = () => {
         {/* Typewriter subtitle */}
         <motion.div variants={itemVariants} className="mb-9 h-8">
           <p className="text-xs sm:text-sm text-steel-200 tracking-[0.15em] uppercase font-medium">
-            <TypewriterText text="Tactical Offline Disaster Communication Protocol" />
+            <TypewriterText key={TAGLINE} text={TAGLINE} />
           </p>
         </motion.div>
 

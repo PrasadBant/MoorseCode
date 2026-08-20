@@ -1,3 +1,11 @@
+/* eslint-disable react-hooks/purity, react-hooks/immutability --
+   This file drives Three.js buffers directly: `useMemo` seeds typed-array
+   geometry once (Math.random for point placement) and `useFrame` mutates
+   it in place every frame, inside r3f's own WebGL animation loop rather
+   than React's render phase. Allocating fresh arrays every frame instead
+   would be a real perf regression, so this is the standard react-three-
+   fiber pattern — the React-Compiler-oriented purity/immutability rules
+   just can't distinguish it from a render-phase mutation. */
 import React, { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
